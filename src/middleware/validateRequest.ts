@@ -33,6 +33,8 @@ export const validateRequest = (schema: ZodSchema): RequestHandler => {
           query: req.query,
           params: req.params,
           cookies: req.cookies,
+          file: req.file,
+          files: req.files,
         });
       }
 
