@@ -31,6 +31,7 @@ router.patch(
     { name: "image", maxCount: 1 },
     { name: "audio", maxCount: 1 },
   ]),
+  validateRequest(BookValidation.updateBookSchema),
   bookController.updateBook
 );
 
