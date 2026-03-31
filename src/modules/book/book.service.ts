@@ -139,7 +139,7 @@ const getAllBooks = async (req: any) => {
     Book.find(filter)
       .skip(skip)
       .limit(Number(perPage))
-      .sort({ createdAt: sortOrder }),
+      .sort({ createdAt: sortOrder }).populate("genre", "title description"),
     Book.countDocuments(filter),
   ]);
 
