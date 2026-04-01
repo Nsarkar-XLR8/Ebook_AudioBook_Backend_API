@@ -1,3 +1,4 @@
+import chatroomRouter from "../modules/chatroom/chatroom.router";
 import bookCategoryRouter from "../modules/bookCategory/bookCategory.router";
 import { Router } from "express";
 import userRouter from "../modules/user/user.router";
@@ -22,7 +23,11 @@ const moduleRoutes = [
   {
     path: "/cart",
     route: CartRouter,
-  }
+  },
+  {
+    path: "/chatroom",
+    route: chatroomRouter,
+  },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
