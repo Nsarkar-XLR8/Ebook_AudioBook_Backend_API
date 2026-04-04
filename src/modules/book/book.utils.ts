@@ -10,9 +10,14 @@ export const transformBookResponse = (
   user: { id: string; role: string } | null,
   purchasedBookIds: string[] = []
 ) => {
-  const isProduction = config.nodeEnv === "production";
+  const isProduction = config.nodeEnv?.toLowerCase() === "production";
   const isAdmin = user?.role === USER_ROLE.ADMIN;
-  
+
+  // Debug log
+  if (config.nodeEnv !== "test") {
+    console.log(`[DEBUG] Transform: role=${user?.role}, isProduction=${isProduction}, isAdmin=${isAdmin}`);
+  }
+
   // Internal helper to transform a single book object
   const transform = (item: any) => {
     if (!item) return item;
@@ -24,7 +29,12 @@ export const transformBookResponse = (
     const isPurchased = purchasedBookIds.some(
       (id) => id.toString() === item._id.toString()
     );
+
     const shouldShowAudio = !isProduction || isAdmin || isPurchased;
+
+    if (config.nodeEnv !== "test") {
+      console.log(`[DEBUG] Book: ${item.title}, isPurchased=${isPurchased}, shouldShowAudio=${shouldShowAudio}`);
+    }
 
     if (!shouldShowAudio) {
       delete item.audio;

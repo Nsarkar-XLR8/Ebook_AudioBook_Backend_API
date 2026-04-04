@@ -3,6 +3,7 @@ import ListenerProgress from "../listenerProgress/listenerProgress.model";
 import Book from "../book/book.model";
 import { Favorite } from "../favorite/favorite.model";
 import { paginationHelper } from "../../utils/pafinationHelper";
+import { transformBookResponse } from "../book/book.utils";
 import mongoose from "mongoose";
 
 const getLibraryStats = async (userId: string) => {
@@ -51,16 +52,29 @@ const getLibraryStats = async (userId: string) => {
   };
 };
 
-const getContinueListening = async (userId: string) => {
+const getContinueListening = async (userId: string, user: any) => {
   const result = await ListenerProgress.findOne({ user: new mongoose.Types.ObjectId(userId) })
     .sort({ lastListenedAt: -1 })
     .populate('book')
     .lean();
 
+  if (!result || !result.book) return result;
+
+  // Fetch purchased book IDs for transformation
+  let purchasedBookIds: string[] = [];
+  if (user.role !== 'admin') {
+    const purchased = await Order.find({
+      userId: userId,
+      paymentStatus: 'paid'
+    }).distinct('items.book');
+    purchasedBookIds = (purchased as any).map((id: any) => id.toString());
+  }
+
+  result.book = transformBookResponse(result.book, user, purchasedBookIds);
   return result;
 };
 
-const getRecentPurchases = async (userId: string) => {
+const getRecentPurchases = async (userId: string, user: any) => {
     // Get unique book IDs from the latest paid orders, limit to 6
     const orders = await Order.find({ userId: new mongoose.Types.ObjectId(userId), paymentStatus: 'paid' }).limit(6)
       .sort({ createdAt: -1 })
@@ -78,11 +92,20 @@ const getRecentPurchases = async (userId: string) => {
 
     const books = await Book.find({ _id: { $in: Array.from(uniqueBookIds) } }).lean();
     
-    // Maintain the order of purchase if possible, or just return the books
-    return books;
+    // Fetch purchased book IDs (user bought these, so they should show audio, but transform handles logic)
+    let purchasedBookIds: string[] = [];
+    if (user.role !== 'admin') {
+      const purchased = await Order.find({
+        userId: userId,
+        paymentStatus: 'paid'
+      }).distinct('items.book');
+      purchasedBookIds = (purchased as any).map((id: any) => id.toString());
+    }
+
+    return transformBookResponse(books, user, purchasedBookIds);
 };
 
-const getMyBooks = async (userId: string, page: string, limit: string) => {
+const getMyBooks = async (userId: string, user: any, page: string, limit: string) => {
   const { skip, limit: perPage, page: currentPage } = paginationHelper(page, limit);
 
   const purchasedBookIds = await Order.find({ 
@@ -100,8 +123,10 @@ const getMyBooks = async (userId: string, page: string, limit: string) => {
     Book.countDocuments({ _id: { $in: purchasedBookIds } })
   ]);
 
+  const transformedBooks = transformBookResponse(books, user, (purchasedBookIds as any).map((id: any) => id.toString()));
+
   return {
-    data: books,
+    data: transformedBooks,
     meta: {
       total,
       page: currentPage,

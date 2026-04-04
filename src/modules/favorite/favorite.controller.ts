@@ -17,7 +17,7 @@ const toggleFavorite = catchAsync(async (req, res) => {
 
 const getMyFavorites = catchAsync(async (req, res) => {
   const { page, limit } = req.query;
-  const result = await favoriteService.getMyFavorites(req.user.id, page as string, limit as string);
+  const result = await favoriteService.getMyFavorites(req.user.id, req.user, page as string, limit as string);
   
   sendResponse(res, {
     statusCode: StatusCodes.OK,

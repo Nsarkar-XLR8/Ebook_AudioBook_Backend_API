@@ -1,6 +1,8 @@
 import { Favorite } from "./favorite.model";
 import mongoose from "mongoose";
 import { paginationHelper } from "../../utils/pafinationHelper";
+import { Order } from "../order/order.model";
+import { transformBookResponse } from "../book/book.utils";
 
 const toggleFavorite = async (userId: string, bookId: string) => {
   const favorite = await Favorite.findOne({
@@ -20,9 +22,20 @@ const toggleFavorite = async (userId: string, bookId: string) => {
   }
 };
 
-const getMyFavorites = async (userId: string, page: string, limit: string) => {
+const getMyFavorites = async (userId: string, user: any, page: string, limit: string) => {
   const { skip, limit: perPage, page: currentPage } = paginationHelper(page, limit);
 
+  // 1. Fetch purchased book IDs if not admin
+  let purchasedBookIds: string[] = [];
+  if (user.role !== 'admin') {
+    const purchased = await Order.find({
+      userId: userId,
+      paymentStatus: 'paid'
+    }).distinct('items.book');
+    purchasedBookIds = (purchased as any).map((id: any) => id.toString());
+  }
+
+  // 2. Fetch favorites
   const [favorites, total] = await Promise.all([
     Favorite.find({ user: new mongoose.Types.ObjectId(userId) })
       .skip(skip)
@@ -33,11 +46,12 @@ const getMyFavorites = async (userId: string, page: string, limit: string) => {
     Favorite.countDocuments({ user: new mongoose.Types.ObjectId(userId) })
   ]);
 
-  // Extract books from favorite records
+  // 3. Extract and transform books
   const books = favorites.map(fav => fav.book);
+  const transformedBooks = transformBookResponse(books, user, purchasedBookIds);
 
   return {
-    data: books,
+    data: transformedBooks,
     meta: {
       total,
       page: currentPage,

@@ -14,7 +14,7 @@ const getLibraryStats = catchAsync(async (req, res) => {
 });
 
 const getContinueListening = catchAsync(async (req, res) => {
-  const result = await libraryService.getContinueListening(req.user.id);
+  const result = await libraryService.getContinueListening(req.user.id, req.user);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -24,7 +24,7 @@ const getContinueListening = catchAsync(async (req, res) => {
 });
 
 const getRecentPurchases = catchAsync(async (req, res) => {
-  const result = await libraryService.getRecentPurchases(req.user.id);
+  const result = await libraryService.getRecentPurchases(req.user.id, req.user);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -35,7 +35,7 @@ const getRecentPurchases = catchAsync(async (req, res) => {
 
 const getMyBooks = catchAsync(async (req, res) => {
   const { page, limit } = req.query;
-  const { data, meta } = await libraryService.getMyBooks(req.user.id, page as string, limit as string);
+  const { data, meta } = await libraryService.getMyBooks(req.user.id, req.user, page as string, limit as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
