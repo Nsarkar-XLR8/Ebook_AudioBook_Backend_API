@@ -12,10 +12,9 @@ const stripe = new Stripe(config.stripe.secretKey!, {
 });
 
 /**
- * Advanced Order Cleanup Task
- * 1. Concurrency guarded: Stops overlaps if DB or Stripe is slow.
- * 2. Detailing: Reports skipped, processed, and failed counts.
- * 3. Configurable: Uses central config for expiry windows.
+ * Verifies pending Stripe Checkout orders.
+ * Paid sessions are finalized as soon as the cron sees them; the expiry window is
+ * only used to decide when an unpaid open session can be cancelled locally.
  */
 const cleanupPendingOrders = createCronTask('OrderCleanup', async (): Promise<ITaskResult> => {
   const result: ITaskResult = { totalScanned: 0, processed: 0, skipped: 0, failed: 0 };
@@ -24,14 +23,13 @@ const cleanupPendingOrders = createCronTask('OrderCleanup', async (): Promise<IT
   const expiryWindow = config.cron.orderExpiryMinutes * 60 * 1000;
   const maxAgeWindow = config.cron.maxOrderAgeHours * 60 * 60 * 1000;
 
-  const thresholdDate = new Date(now.getTime() - expiryWindow);
   const maxAgeDate = new Date(now.getTime() - maxAgeWindow);
 
-  // 1. Find pending orders within the valid cleanup window
+  // Scan all recent pending Stripe sessions so paid orders do not wait for the
+  // expiry window before being finalized.
   const pendingOrders = await Order.find({
     paymentStatus: 'pending',
     createdAt: {
-      $lte: thresholdDate,
       $gte: maxAgeDate,
     },
     stripeSessionId: { $exists: true, $ne: null },
@@ -52,7 +50,15 @@ const cleanupPendingOrders = createCronTask('OrderCleanup', async (): Promise<IT
       if (session.payment_status === 'paid') {
         await OrderService.finalizeOrder(order, session);
         result.processed++;
-      } else if (session.status === 'expired' || (session.status === 'open' && session.payment_status === 'unpaid' && new Date(session.expires_at * 1000) < now)) {
+      } else if (
+        session.status === 'expired' ||
+        (
+          session.status === 'open' &&
+          session.payment_status === 'unpaid' &&
+          order.createdAt &&
+          now.getTime() - order.createdAt.getTime() >= expiryWindow
+        )
+      ) {
         order.paymentStatus = 'cancelled';
         await order.save();
         result.processed++;
