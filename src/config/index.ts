@@ -5,7 +5,7 @@ export default {
   port: process.env.PORT,
   mongodbUrl: process.env.MONGODB_URL,
   nodeEnv: process.env.NODE_ENV,
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
+  clientUrl: process.env.CLIENT_URL || 'https://topperscrowd-frontend.vercel.app/',
 
   bcryptSaltRounds: process.env.BCRYPT_SALT_ROUNDS,
   NODE_ENV: process.env.NODE_ENV,
