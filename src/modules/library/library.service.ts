@@ -106,7 +106,7 @@ const getRecentPurchases = async (userId: string, user: any) => {
     return transformBookResponse(books, user, purchasedBookIds);
 };
 
-const getMyBooks = async (userId: string, user: any, page: string, limit: string) => {
+const getMyBooks = async (userId: string, page: string, limit: string) => {
   const { skip, limit: perPage, page: currentPage } = paginationHelper(page, limit);
 
   const purchasedBookIds = await Order.find({ 
